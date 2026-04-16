@@ -1,9 +1,12 @@
 using BepInEx;
 using BepInEx.Configuration;
 using GorillaNetworking;
+using HarmonyLib;
 using Photon.Pun;
+using UnityEngine;
 using UnityEngine.XR;
 using Valve.VR;
+using System.Collections;
 
 namespace CosmeticToggleThing
 {
@@ -13,6 +16,7 @@ namespace CosmeticToggleThing
         private ConfigEntry<string> configCosmeticID;
         private ConfigEntry<bool> configIsLeft;
         bool lastClick = false; //stupid joystick click running every frame
+        bool isSteamVR;
 
         private void Awake()
         {
@@ -21,26 +25,46 @@ namespace CosmeticToggleThing
         }
         void Update()
         {
-            var controllerOculus = configIsLeft.Value ? ControllerInputPoller.instance.leftControllerDevice : ControllerInputPoller.instance.rightControllerDevice;
-            var controllerSteam = configIsLeft.Value ? SteamVR_Actions.gorillaTag_LeftJoystickClick : SteamVR_Actions.gorillaTag_RightJoystickClick;
-
-            bool oculusPressed = controllerOculus.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out bool currentOculus) && currentOculus;
-            bool steamPressed = controllerSteam.state;
-
-            bool pressed = oculusPressed || steamPressed; // why does steam and meta link have to be different :sob:
-
-            if (pressed && !lastClick)
+            bool Click;
+            if (configIsLeft.Value)
             {
-                Wear(configCosmeticID.Value);
+                if (!isSteamVR)
+                    ControllerInputPoller.instance.leftControllerDevice.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out Click);
+                else
+                    Click = SteamVR_Actions.gorillaTag_LeftJoystickClick.state;
             }
+            else
+            {
+                if (!isSteamVR)
+                    ControllerInputPoller.instance.rightControllerDevice.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out Click);
+                else
+                    Click = SteamVR_Actions.gorillaTag_RightJoystickClick.state;
+            }
+            if (Click && !lastClick)
+                Wear(configCosmeticID.Value);
 
-            lastClick = pressed;
+            lastClick = Click;
         }
         public void Wear(string cosmeticName)
         {
             CosmeticsController.instance.ApplyCosmeticItemToSet(CosmeticsController.instance.currentWornSet, CosmeticsController.instance.GetItemFromDict(cosmeticName), true, false);
             CosmeticsController.instance.ApplyCosmeticItemToSet(VRRig.LocalRig.tryOnSet, CosmeticsController.instance.GetItemFromDict(cosmeticName), true, false);
             CosmeticsController.instance.UpdateWornCosmetics(PhotonNetwork.InRoom);
+        }
+        void Start()
+        {
+            StartCoroutine(WaitForPlayFab());
+        }
+        private IEnumerator WaitForPlayFab()
+        {
+            while (PlayFabAuthenticator.instance == null || PlayFabAuthenticator.instance.platform == null || string.IsNullOrEmpty(PlayFabAuthenticator.instance.platform.PlatformTag))
+            {
+                yield return null;
+            }
+
+            string tag = PlayFabAuthenticator.instance.platform.PlatformTag;
+
+            isSteamVR = tag.ToLower().Contains("steam");
         }
     }
 }
