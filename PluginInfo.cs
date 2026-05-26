@@ -7,7 +7,7 @@
 	{
 		public const string GUID = "com.mancho.gorillatag.CosmeticToggleThing";
 		public const string Name = "CosmeticToggleThing";
-		public const string Version = "1.0.0";
+		public const string Version = "1.1.1";
 	}
 }
 
