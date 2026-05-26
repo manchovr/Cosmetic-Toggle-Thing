@@ -54,6 +54,7 @@ namespace CosmeticToggleThing
             CosmeticsController.instance.ApplyCosmeticItemToSet(CosmeticsController.instance.currentWornSet, CosmeticsController.instance.GetItemFromDict(cosmeticName), true, false);
             CosmeticsController.instance.ApplyCosmeticItemToSet(VRRig.LocalRig.tryOnSet, CosmeticsController.instance.GetItemFromDict(cosmeticName), true, false);
             CosmeticsController.instance.UpdateWornCosmetics(PhotonNetwork.InRoom);
+            CosmeticsController.instance.OnCosmeticsUpdated?.Invoke();
         }
         public override void OnLateInitializeMelon()
         {
